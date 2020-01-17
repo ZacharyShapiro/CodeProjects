@@ -1,0 +1,96 @@
+# Import python libraries required to run the code
+
+import pyodbc
+import requests
+import json
+import datetime
+import time
+
+# Begin runtime count
+
+t1 = time.time()
+
+# Create SQL Server Connection
+
+pyodbc.pooling = False
+
+conn = pyodbc.connect('Driver={ODBC Driver 17 for SQL Server};'
+                      'Server=Desktop_Name;'
+                      'Database=Stocks;'
+                      'Trusted_Connection=Yes;')
+
+cursor = conn.cursor()
+
+# Automatically commit changes to SQL Database
+
+conn.autocommit = True
+
+
+# Create Mainclass for API-Accessing Objects
+
+class DataGrabber:
+    # Give all objects within class the API Key, as well as common URL path
+    def __init__(self):
+        self.key = 'Api_Key'
+        self.reqstart = 'https://cloud.iexapis.com/stable/stock/'
+
+    # Give all objects within class instructions to create valid requests, handle invalid requests
+    def makerequest(self):
+        # Method instructions to create request URL
+        argument = self.reqstart + self.ticker + self.reqend + self.key
+        response = requests.get(argument)
+        try:
+            StockTick = str((response.json()['quote']['symbol']))
+            StockPrice = (float(response.json()['quote']['latestPrice']))
+            Timestamp = datetime.datetime.now()
+            Volume = (int(response.json()['quote']['avgTotalVolume']))
+            PE = (float(response.json()['quote']['peRatio']))
+            EPS = (float(response.json()['quote']['latestPrice']) / (response.json()['quote']['peRatio']))
+
+            data = [StockTick, StockPrice, Timestamp, Volume, PE, EPS]
+            return data
+        except:
+            response = json.decoder.JSONDecodeError
+        print('Error')
+        print(self.ticker)
+
+
+class CurrentPrice(DataGrabber):
+    # Create Subclass in order to access snap-shot data
+    def __init__(self, ticker):
+        super().__init__()
+        self.ticker = str(ticker)
+        # URL to use for objects to construct get API requests
+        self.reqend = '/book?&token='
+
+    def updateSQL(self, rtvals):
+        # Instructions for objects to insert data into SQL database
+        sql = """INSERT INTO Stocks (Ticker, Price, Accessed, Volume, PE, EPS) VALUES (?,?,?,?,?,?)"""
+        params = rtvals
+        cursor.execute(sql, params)
+
+
+# Read a file containing stock tickers into memory
+file = open(r"filepath")
+SPList = file.readlines()
+# Process the tickers into a list
+for i in range(0, len(SPList)):
+    (SPList[i]) = SPList[i].strip("\n")
+
+
+# Loopable Function to create objects, call request creation method, call SQL update method
+def passthru(x):
+    Automated = CurrentPrice(x)
+    Automated.updateSQL(Automated.makerequest())
+
+
+# Loop through the list of stock tickers with the function, perform get requests, update SQL database with a new record
+for i in range(0, len(SPList)):
+    passthru(SPList[i])
+
+# Calculate and display runtime
+t2 = time.time()
+
+runtime = t2 - t1
+
+print('Ran in', runtime, 'seconds')
