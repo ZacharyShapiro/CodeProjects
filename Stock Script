@@ -45,7 +45,7 @@ class DataGrabber:
             Timestamp = datetime.datetime.now()
             Volume = (int(response.json()['quote']['avgTotalVolume']))
             PE = (float(response.json()['quote']['peRatio']))
-            EPS = (float(response.json()['quote']['latestPrice']) / (response.json()['quote']['peRatio']))
+            EPS = (float(response.json()['quote']['marketCap']) / (response.json()['quote']['latestPrice']))
 
             data = [StockTick, StockPrice, Timestamp, Volume, PE, EPS]
             return data
