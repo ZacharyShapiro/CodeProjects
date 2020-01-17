@@ -49,6 +49,7 @@ class DataGrabber:
 
             data = [StockTick, StockPrice, Timestamp, Volume, PE, EPS]
             return data
+     # Handle Errors, Display any problematic ticker in console
         except:
             response = json.decoder.JSONDecodeError
         print('Error')
