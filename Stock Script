@@ -46,7 +46,7 @@ class PriceGrabber(DataGrabber):
         self.ticker = str(ticker)
         # URL to use for objects to construct get API requests
         self.request_end = '/book?&token='
-
+ 
     def update_SQL(self, rtvals):
         # Instructions for objects to insert data into SQL database
         sql = """INSERT INTO Stocks (Ticker, Price, Accessed, Volume, PE, EPS) VALUES (?,?,?,?,?,?)"""
