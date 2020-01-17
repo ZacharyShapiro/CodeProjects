@@ -6,92 +6,101 @@ import json
 import datetime
 import time
 
-# Begin runtime count
-
-t1 = time.time()
-
-# Create SQL Server Connection
-
-pyodbc.pooling = False
-
-conn = pyodbc.connect('Driver={ODBC Driver 17 for SQL Server};'
-                      'Server=Desktop_Name;'
-                      'Database=Stocks;'
-                      'Trusted_Connection=Yes;')
-
-cursor = conn.cursor()
-
-# Automatically commit changes to SQL Database
-
-conn.autocommit = True
-
 
 # Create Mainclass for API-Accessing Objects
 
 class DataGrabber:
     # Give all objects within class the API Key, as well as common URL path
-    def __init__(self):
-        self.key = 'Api_Key'
-        self.reqstart = 'https://cloud.iexapis.com/stable/stock/'
+    def __init__(self, cursor):
+        self.cursor = cursor
+        self.key = 'API_KEY'
+        self.request_start = 'https://cloud.iexapis.com/stable/stock/'
+        self.request_end = None
 
     # Give all objects within class instructions to create valid requests, handle invalid requests
-    def makerequest(self):
+    def make_request(self, ticker):
         # Method instructions to create request URL
-        argument = self.reqstart + self.ticker + self.reqend + self.key
+        if self.request_end is None:
+            raise ValueError('Child Class has no request defined')
+        argument = self.request_start + ticker + self.request_end + self.key
         response = requests.get(argument)
         try:
-            StockTick = str((response.json()['quote']['symbol']))
-            StockPrice = (float(response.json()['quote']['latestPrice']))
-            Timestamp = datetime.datetime.now()
-            Volume = (int(response.json()['quote']['avgTotalVolume']))
-            PE = (float(response.json()['quote']['peRatio']))
-            EPS = (float(response.json()['quote']['marketCap']) / (response.json()['quote']['latestPrice']))
+            stock_tick = str((response.json()['quote']['symbol']))
+            stock_price = (float(response.json()['quote']['latestPrice']))
+            time_stamp = datetime.datetime.now()
+            volume = (int(response.json()['quote']['avgTotalVolume']))
+            pe = (float(response.json()['quote']['peRatio']))
+            eps = (float(response.json()['quote']['marketCap']) / (response.json()['quote']['latestPrice']))
 
-            data = [StockTick, StockPrice, Timestamp, Volume, PE, EPS]
+            data = [stock_tick, stock_price, time_stamp, volume, pe, eps]
             return data
-     # Handle Errors, Display any problematic ticker in console
-        except:
-            response = json.decoder.JSONDecodeError
-        print('Error')
-        print(self.ticker)
+        except json.decoder.JSONDecodeError:
+            print('JsonDecodeError, Skipping')
+            print(ticker)
 
 
-class CurrentPrice(DataGrabber):
+class PriceGrabber(DataGrabber):
     # Create Subclass in order to access snap-shot data
-    def __init__(self, ticker):
-        super().__init__()
+    def __init__(self, ticker, cursor):
+        super().__init__(cursor)
         self.ticker = str(ticker)
         # URL to use for objects to construct get API requests
-        self.reqend = '/book?&token='
+        self.request_end = '/book?&token='
 
-    def updateSQL(self, rtvals):
+    def update_SQL(self, rtvals):
         # Instructions for objects to insert data into SQL database
         sql = """INSERT INTO Stocks (Ticker, Price, Accessed, Volume, PE, EPS) VALUES (?,?,?,?,?,?)"""
         params = rtvals
-        cursor.execute(sql, params)
+        self.cursor.execute(sql, params)
 
 
 # Read a file containing stock tickers into memory
-file = open(r"filepath")
-SPList = file.readlines()
-# Process the tickers into a list
-for i in range(0, len(SPList)):
-    (SPList[i]) = SPList[i].strip("\n")
+
+def import_ticker_list():
+    file = open(r"filepath.txt")
+    SPList = file.readlines()
+    # Process the tickers into a list
+    for i in range(0, len(SPList)):
+        (SPList[i]) = SPList[i].strip("\n")
+    return SPList
 
 
-# Loopable Function to create objects, call request creation method, call SQL update method
-def passthru(x):
-    Automated = CurrentPrice(x)
-    Automated.updateSQL(Automated.makerequest())
+def main():
+    # Begin runtime count
+
+    t1 = time.time()
+
+    # Loop through the list of stock tickers with the function, perform get requests, update SQL database with a new record
+
+    # Create SQL Server Connection
+
+    pyodbc.pooling = False
+
+    conn = pyodbc.connect('Driver={ODBC Driver 17 for SQL Server};'
+                          'Server=SERVER NAME;'
+                          'Database=Stocks;'
+                          'Trusted_Connection=Yes;')
+
+    cursor = conn.cursor()
+
+    # Automatically commit changes to SQL Database
+
+    conn.autocommit = True
+
+    SPList = import_ticker_list()
+
+    PG = PriceGrabber(None, cursor)
+    # Looping Function to create object, call request creation method, call SQL update method using tickers from list
+    for item in SPList:
+        data = PG.make_request(item)
+        PG.update_SQL(data)
+
+    # Calculate and display runtime
+    t2 = time.time()
+
+    runtime = t2 - t1
+
+    print('Ran in', runtime, 'seconds')
 
 
-# Loop through the list of stock tickers with the function, perform get requests, update SQL database with a new record
-for i in range(0, len(SPList)):
-    passthru(SPList[i])
-
-# Calculate and display runtime
-t2 = time.time()
-
-runtime = t2 - t1
-
-print('Ran in', runtime, 'seconds')
+main()
