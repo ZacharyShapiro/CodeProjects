@@ -13,7 +13,7 @@ class DataGrabber:
     # Give all objects within class the API Key, as well as common URL path
     def __init__(self, cursor):
         self.cursor = cursor
-        self.key = 'API_KEY'
+        self.key = 'pk_4e3e25d842ea4f59903c4afbd5a6fa2c'
         self.request_start = 'https://cloud.iexapis.com/stable/stock/'
         self.request_end = None
 
@@ -30,9 +30,8 @@ class DataGrabber:
             time_stamp = datetime.datetime.now()
             volume = (int(response.json()['quote']['avgTotalVolume']))
             pe = (float(response.json()['quote']['peRatio']))
-            eps = (float(response.json()['quote']['marketCap']) / (response.json()['quote']['latestPrice']))
 
-            data = [stock_tick, stock_price, time_stamp, volume, pe, eps]
+            data = [stock_tick, stock_price, time_stamp, volume, pe]
             return data
         except json.decoder.JSONDecodeError:
             print('JsonDecodeError, Skipping')
@@ -46,10 +45,10 @@ class PriceGrabber(DataGrabber):
         self.ticker = str(ticker)
         # URL to use for objects to construct get API requests
         self.request_end = '/book?&token='
- 
+
     def update_SQL(self, rtvals):
         # Instructions for objects to insert data into SQL database
-        sql = """INSERT INTO Stocks (Ticker, Price, Accessed, Volume, PE, EPS) VALUES (?,?,?,?,?,?)"""
+        sql = """INSERT INTO Stocks (Ticker, Price, Accessed, Volume, PE) VALUES (?,?,?,?,?)"""
         params = rtvals
         self.cursor.execute(sql, params)
 
@@ -57,7 +56,7 @@ class PriceGrabber(DataGrabber):
 # Read a file containing stock tickers into memory
 
 def import_ticker_list():
-    file = open(r"filepath.txt")
+    file = open(r"C:\Users\Zackl\Documents\S&P500.csv")
     SPList = file.readlines()
     # Process the tickers into a list
     for i in range(0, len(SPList)):
@@ -77,7 +76,7 @@ def main():
     pyodbc.pooling = False
 
     conn = pyodbc.connect('Driver={ODBC Driver 17 for SQL Server};'
-                          'Server=SERVER NAME;'
+                          'Server=DESKTOP-7G5BHA4;'
                           'Database=Stocks;'
                           'Trusted_Connection=Yes;')
 
