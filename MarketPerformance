@@ -1,0 +1,163 @@
+import sqlite3
+import pandas as pd
+from datetime import datetime
+from dateutil.relativedelta import *
+import xlrd
+import numpy as np
+
+conn = sqlite3.connect('ConsLists')
+
+cur = conn.cursor()
+
+# Sectors
+
+GICSdict = {
+    'Sector_Energy': '10____',
+    'Sector_Materials': '15____',
+    'Sector_Industrials': '20____',
+    'Sector_Consumer Discretionary': '25____',
+    'Sector_Consumer Staples': '30____',
+    'Sector_Health Care': '35____',
+    'Sector_Financials': '40____',
+    'Sector_Information Technology': '45____',
+    'Sector_Communication Services': '50____',
+    'Sector_Utilities': '55____',
+    'Sector_Real Estate': '60____',
+
+    # Industry Groups
+    'IndustryGroup_Energy': '1010__',
+    'IndustryGroup_Materials': '1510__',
+    'IndustryGroup_Capital Goods': '2010__',
+    'IndustryGroup_Commercial & Professional Services': '2020__',
+    'IndustryGroup_Transportation': '2030__',
+    'IndustryGroup_Automobiles & Components': '2510__',
+    'IndustryGroup_Consumer Durables & Apparel': '2520__',
+    'IndustryGroup_Consumer Services': '2530__',
+    'IndustryGroup_Retailing': '2550__',
+    'IndustryGroup_Food & Staples Retailing': '3010__',
+    'IndustryGroup_Food, Beverage & Tobacco': '3020__',
+    'IndustryGroup_Household & Personal Products': '3030__',
+    'IndustryGroup_Health Care Equipment & Services': '3510__',
+    'IndustryGroup_Pharmaceuticals, Biotechnology & Life Sciences': '3520__',
+    'IndustryGroup_Banks': '4010__',
+    'IndustryGroup_Diversified Financials': '4020__',
+    'IndustryGroup_Insurance': '4030__',
+    'IndustryGroup_Software & Services': '4510__',
+    'IndustryGroup_Technology Hardware & Equipment': '4520__',
+    'IndustryGroup_Semiconductors & Semiconductor Equipment': '4530__',
+    'IndustryGroup_Communication Services': '5010__',
+    'IndustryGroup_Media & Entertainment': '5020__',
+    'IndustryGroup_Utilities': '5510__',
+    'IndustryGroup_Real Estate': '6010__',
+
+    # Industries
+    'Industry_Energy Equipment & Services': '101010',
+    'Industry_Oil, Gas & Consumable Fuels': '101020',
+    'Industry_Chemicals': '151010',
+    'Industry_Construction Materials': '151020',
+    'Industry_Containers & Packaging': '151030',
+    'Industry_Metals & Mining': '151040',
+    'Industry_Paper & Forest Products': '151050',
+    'Industry_Aerospace & Defense': '201010',
+    'Industry_Building Products': '201020',
+    'Industry_Construction & Engineering': '201030',
+    'Industry_Electrical Equipment': '201040',
+    'Industry_Industrial Conglomerates': '201050',
+    'Industry_Machinery': '201060',
+    'Industry_Trading Companies & Distributors': '201070',
+    'Industry_Commercial Services & Supplies': '202010',
+    'Industry_Professional Services': '202020',
+    'Industry_Air Freight & Logistics': '203010',
+    'Industry_Airlines': '203020',
+    'Industry_Marine': '203030',
+    'Industry_Road & Rail': '203040',
+    'Industry_Transportation Infrastructure': '203050',
+    'Industry_Auto Components': '251010',
+    'Industry_Automobiles': '251020',
+    'Industry_Household Durables': '252010',
+    'Industry_Leisure Products': '252020',
+    'Industry_Textiles, Apparel & Luxury Goods': '252030',
+    'Industry_Hotels, Restaurants & Leisure': '253010',
+    'Industry_Diversified Consumer Services': '253020',
+    'Industry_Distributors': '255010',
+    'Industry_Internet & Direct Marketing Retail': '255020',
+    'Industry_Multiline Retail': '255030',
+    'Industry_Specialty Retail': '255040',
+    'Industry_Food & Staples Retailing': '301010',
+    'Industry_Beverages': '302010',
+    'Industry_Food Products': '302020',
+    'Industry_Tobacco': '302030',
+    'Industry_Household Products': '303010',
+    'Industry_Personal Products': '303020',
+    'Industry_Health Care Equipment & Supplies': '351010',
+    'Industry_Health Care Providers & Services': '351020',
+    'Industry_Health Care Technology': '351030',
+    'Industry_Biotechnology': '352010',
+    'Industry_Pharmaceuticals': '352020',
+    'Industry_Life Sciences Tools & Services': '352030',
+    'Industry_Banks': '401010',
+    'Industry_Thrifts & Mortgage Finance': '401020',
+    'Industry_Diversified Financial Services': '402010',
+    'Industry_Consumer Finance': '402020',
+    'Industry_Capital Markets': '402030',
+    'Industry_Mortgage Real Estate Investment Trusts (REITs)': '402040',
+    'Industry_Insurance': '403010',
+    'Industry_IT Services': '451020',
+    'Industry_Software': '451030',
+    'Industry_Communications Equipment': '452010',
+    'Industry_Technology Hardware, Storage & Peripherals': '452020',
+    'Industry_Electronic Equipment, Instruments & Components': '452030',
+    'Industry_Semiconductors & Semiconductor Equipment': '453010',
+    'Industry_Diversified Telecommunication Services': '501010',
+    'Industry_Wireless Telecommunication Services': '501020',
+    'Industry_Media': '502010',
+    'Industry_Entertainment': '502020',
+    'Industry_Interactive Media & Services': '502030',
+    'Industry_Electric Utilities': '551010',
+    'Industry_Gas Utilities': '551020',
+    'Industry_Multi-Utilities': '551030',
+    'Industry_Water Utilities': '551040',
+    'Industry_Independent Power and Renewable Electricity Producers': '551050',
+    'Industry_Equity Real Estate Investment Trusts (REITs)': '601010',
+    'Industry_Real Estate Management & Development': '601020', }
+
+
+def TimeToPython(ExcelTime):
+    python_date = datetime.date(xlrd.xldate_as_datetime(ExcelTime, 0))
+    ToPythonAsString = str(python_date)
+    return ToPythonAsString
+
+
+def TimeToExcel(PythonTime):
+    PythonTime = PythonTime.split('-')
+    PythonTime = [int(i) for i in PythonTime]
+    PythonTime = tuple(PythonTime)
+    excel_date = xlrd.xldate.xldate_from_date_tuple(PythonTime, 0)
+    ToExcelAsInt = int(excel_date)
+    return ToExcelAsInt
+
+
+indexdict = {"India": 'LICR%', "Canada": 'LTTO%', "China": 'LCHS%', "Europe": 'LDJS%',
+             'Japan': 'LJAP%', 'SP900': 'LS&P9%', 'SP600': 'LS&P6%', 'SP500' : "LS&PCOM%",
+             'Energy': 'LSP5EENE%',
+             'Materials': 'LSPSEMAT%',
+             'Industrials': 'LSPSEIND%',
+             'Consumer Discretionary': 'LSPSECOD%',
+             'Consumer Staples': 'LSPSECST%',
+             'Health Care': 'LSPSEHCR%',
+             'Financials': 'LSPSEFIN%',
+             'Information Technology': 'LSPSEINT%',
+             'Communication Services': 'LSPSETEL%',
+             'Utilities': 'LSPSEUTL%',
+             'Real Estate': 'LSPSER%', }
+
+
+def SQLBuilder(IndexString):
+    part1 = "Select * From ConstituentLists WHERE SourceIndex LIKE '"
+    part2 = indexdict[IndexString]
+    part3 = "'"
+    fullstatement = part1 + part2 + part3
+    global DataLoaded
+    DataLoaded = (pd.read_sql_query(fullstatement, conn))
+
+conn.close
